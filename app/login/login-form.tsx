@@ -46,6 +46,8 @@ export function LoginForm({ initialError }: { initialError?: string }) {
         />
         <button
           type="button"
+          // Keep focus in the input so the on-screen keyboard stays open.
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => setShowPassword((v) => !v)}
           aria-label="Show password"
           aria-pressed={showPassword}
