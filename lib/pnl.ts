@@ -28,10 +28,11 @@ export type Figure = { pnl: number; base: number };
 export type MonthStats = {
   /** Month P&L against the balance at the start of the month. */
   total: Figure;
-  best: Figure | null;
-  worst: Figure | null;
-  greenDays: number;
-  tradingDays: number;
+  /** Share of logged days with pnl > 0 (0-1), or null with no logged days. */
+  winRate: number | null;
+  /** Mean winning / losing day in the displayed unit; null when there are none. */
+  avgWin: Figure | null;
+  avgLoss: Figure | null;
 };
 
 export function toKey(date: Date): string {
@@ -79,19 +80,24 @@ function measure(f: Figure, unit: Unit): number {
   return unit === "usd" ? f.pnl : f.pnl / f.base;
 }
 
-/** Best and worst days are ranked in the displayed unit, so they match the calendar cells. */
+/**
+ * Averages are taken in the displayed unit (mean of each day's own percent in % mode), so they match the calendar cells.
+ * The result is a Figure with base 1, so `formatPnl` renders it unchanged in USD and as value × 100 in percent.
+ */
 export function monthStats(weeks: CalendarDay[][], unit: Unit): MonthStats {
   const days = weeks.flat().filter((d) => d.inMonth);
   const traded: Figure[] = days.filter((d) => d.pnl !== null).map((d) => ({ pnl: d.pnl as number, base: d.base }));
-  const open = days.filter((d) => d.closed === null);
-  const pick = (better: (a: number, b: number) => boolean) =>
-    traded.reduce<Figure | null>((acc, f) => (acc === null || better(measure(f, unit), measure(acc, unit)) ? f : acc), null);
+  const average = (figs: Figure[]): Figure | null => {
+    const usable = unit === "pct" ? figs.filter((f) => f.base > 0) : figs;
+    if (usable.length === 0) return null;
+    return { pnl: usable.reduce((a, f) => a + measure(f, unit), 0) / usable.length, base: 1 };
+  };
+  const wins = traded.filter((f) => f.pnl > 0);
   return {
     total: { pnl: traded.reduce((a, f) => a + f.pnl, 0), base: days[0].base },
-    best: pick((a, b) => a > b),
-    worst: pick((a, b) => a < b),
-    greenDays: traded.filter((f) => f.pnl > 0).length,
-    tradingDays: open.length,
+    winRate: traded.length === 0 ? null : wins.length / traded.length,
+    avgWin: average(wins),
+    avgLoss: average(traded.filter((f) => f.pnl < 0)),
   };
 }
 

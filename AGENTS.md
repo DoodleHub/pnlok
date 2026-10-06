@@ -34,7 +34,7 @@ components/
   profile-menu.tsx           Avatar button → menu: Manage accounts, Sign out
   manage-accounts.tsx        Dialog body: list accounts, edit inline (CreateAccountForm), delete with confirm
   account-select.tsx         Custom listbox dropdown of accounts + "New account" entry
-  stat-strip.tsx             Monthly P&L, best/worst day, green days
+  stat-strip.tsx             Monthly P&L, win rate, average win/loss
   calendar-panel.tsx         Month grid (Mon-first), month nav, USD/% toggle, legend; in-month days are buttons
   day-editor.tsx             Dialog to set/clear one day's P&L (calls saveDailyPnl)
   create-account-form.tsx    Account form (useActionState → createAccount, or updateAccount when `account` is passed); also exports shared input/button class strings
@@ -70,9 +70,9 @@ ss-mocks/calendar-design.png Reference design for the dashboard
 - `Account.daily` is `Record<"YYYY-MM-DD", number>`. Build keys with `toKey()` (local time). Never use `toISOString()` for date keys; it shifts days across timezones.
 - A day with no row means "no activity" (`pnl: null`, rendered as —), which is different from a 0 P&L day.
 - Calendar weeks start Monday and show Mon–Fri only (weekends are hidden; `buildMonth` still returns 7-day weeks). Only in-month days count toward totals and are editable.
-- Percent mode measures against the balance going into the period: a day uses its opening balance (`CalendarDay.base` = starting balance + all earlier P&L), monthly P&L the balance at the 1st, and the header's all-time change the starting balance. Best/worst day are ranked in the displayed unit, so they can differ between USD and %. A non-positive base formats as —. `formatPnl` produces `+$4,373.00`, `-$340.00`, `+1.84%`, `$0.00`.
+- Percent mode measures against the balance going into the period: a day uses its opening balance (`CalendarDay.base` = starting balance + all earlier P&L), monthly P&L the balance at the 1st, and the header's all-time change the starting balance. Average win/loss are averaged in the displayed unit (each day's own percent in % mode). A non-positive base formats as —. `formatPnl` produces `+$4,373.00`, `-$340.00`, `+1.84%`, `$0.00`.
 - US market closures (weekends, NYSE holidays computed in `lib/market.ts`, plus a hand-kept list of unscheduled closures) set `CalendarDay.closed`. Closed days aren't editable unless they already hold an entry (so it can be cleared), and `saveDailyPnl` rejects new P&L on them.
-- `monthStats.tradingDays` counts open market days in the month; `greenDays` counts days with pnl > 0.
+- `monthStats.winRate` is days with pnl > 0 over days with an entry (a 0 day counts as traded, not a win); `avgWin`/`avgLoss` average the positive/negative days.
 - P&L is stored as `numeric(14,2)`; amounts are rounded to cents before saving.
 
 ## Supabase
