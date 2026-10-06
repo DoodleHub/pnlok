@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 type Props = {
   title: string;
@@ -15,9 +15,14 @@ export function Modal({ title, description, onClose, children }: Props) {
 
   // No close() on cleanup: it fires a "close" event that calls onClose, which under Strict Mode's
   // mount → unmount → mount would dismiss the dialog as soon as it opens. Unmounting removes it anyway.
-  useEffect(() => {
+  // showModal() moves focus to the first focusable child, overriding React's autoFocus (which runs
+  // earlier and isn't rendered as an attribute), so focus [data-autofocus] afterwards. A layout effect
+  // keeps this inside the opening tap, which mobile browsers require before showing the keyboard.
+  useLayoutEffect(() => {
     const dialog = ref.current;
-    if (dialog && !dialog.open) dialog.showModal();
+    if (!dialog || dialog.open) return;
+    dialog.showModal();
+    dialog.querySelector<HTMLElement>("[data-autofocus]")?.focus();
   }, []);
 
   return (

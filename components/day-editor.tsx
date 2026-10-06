@@ -78,7 +78,7 @@ export function DayEditor({ accountId, accountName, day, onClose }: Props) {
               type="text"
               inputMode="decimal"
               autoComplete="off"
-              autoFocus
+              data-autofocus
               value={value}
               onChange={(e) => {
                 // A typed sign (hardware keyboards) flips the toggle instead of staying in the field.
