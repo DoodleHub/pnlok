@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { formatPnl, formatPnlCompact, tone, type CalendarDay, type Unit } from "@/lib/pnl";
 import { ChevronLeft, ChevronRight } from "./icons";
 
@@ -33,8 +34,9 @@ export function CalendarPanel({
   onUnitChange,
   onSelectDay,
 }: Props) {
+  const swipe = useSwipe({ onLeft: onNext, onRight: onPrev });
   return (
-    <section aria-label="Calendar" className="rounded-lg border border-line-strong bg-surface p-3 sm:p-4">
+    <section aria-label="Calendar" {...swipe} className="rounded-lg border border-line-strong bg-surface p-3 sm:p-4">
       <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-3 px-1 sm:px-3">
         <h2 className="w-full text-[24px] leading-8 font-bold tracking-[-0.01em] sm:mr-6 sm:w-auto sm:text-display-month">
           {monthLabel.format(new Date(year, month, 1))}
@@ -89,6 +91,31 @@ export function CalendarPanel({
       <Legend />
     </section>
   );
+}
+
+/** Horizontal swipe detection: fires when the finger travels mostly sideways past a threshold. */
+function useSwipe({ onLeft, onRight }: { onLeft: () => void; onRight: () => void }) {
+  const start = useRef<{ x: number; y: number } | null>(null);
+  return {
+    onTouchStart: (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      start.current = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null;
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      const s = start.current;
+      start.current = null;
+      if (!s) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - s.x;
+      const dy = t.clientY - s.y;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (dx < 0) onLeft();
+      else onRight();
+    },
+    onTouchCancel: () => {
+      start.current = null;
+    },
+  };
 }
 
 const cellFill = { profit: "bg-profit-cell", loss: "bg-loss-cell", flat: "bg-cell" };
