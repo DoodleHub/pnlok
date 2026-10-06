@@ -17,7 +17,9 @@ type Props = {
 };
 
 export function DayEditor({ accountId, accountName, day, onClose }: Props) {
-  const [value, setValue] = useState(day.pnl === null ? "" : String(day.pnl));
+  // Mobile decimal keypads have no minus key, so the sign is a separate toggle and the input holds the amount.
+  const [loss, setLoss] = useState(day.pnl !== null && day.pnl < 0);
+  const [value, setValue] = useState(day.pnl === null ? "" : String(Math.abs(day.pnl)));
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
   // Which button started the pending save, so only that one shows a spinner.
@@ -36,24 +38,61 @@ export function DayEditor({ accountId, accountName, day, onClose }: Props) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          save(value.trim() === "" ? null : Number(value));
+          const text = value.trim();
+          if (text === "") return save(null);
+          const amount = Number(text);
+          if (!Number.isFinite(amount)) return setError("Enter a number, like 320 or 175.50.");
+          save(loss ? -amount : amount);
         }}
         className="flex flex-col gap-4"
       >
-        <label className="flex flex-col gap-1.5 text-body text-fg-secondary">
-          P&amp;L (USD)
-          <input
-            type="number"
-            step="0.01"
-            inputMode="decimal"
-            autoFocus
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="e.g. 320 or -175.50"
-            className={inputClass}
-          />
-          <span className="text-caption text-fg-muted">Use a minus sign for a loss. Leave empty for no activity.</span>
-        </label>
+        <div className="flex flex-col gap-1.5 text-body text-fg-secondary">
+          <label htmlFor="day-pnl">P&amp;L (USD)</label>
+          <div className="flex gap-2">
+            <div
+              role="group"
+              aria-label="Profit or loss"
+              className="inline-flex shrink-0 gap-0.5 rounded-md border border-line bg-sunken p-[3px]"
+            >
+              {[
+                { label: "Profit", isLoss: false },
+                { label: "Loss", isLoss: true },
+              ].map((o) => (
+                <button
+                  key={o.label}
+                  type="button"
+                  aria-pressed={loss === o.isLoss}
+                  onClick={() => setLoss(o.isLoss)}
+                  className={`h-9 rounded-sm px-3 text-body font-semibold transition-colors ${
+                    loss === o.isLoss
+                      ? `bg-raised ${o.isLoss ? "text-loss" : "text-profit"}`
+                      : "text-fg-secondary hover:text-fg"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <input
+              id="day-pnl"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              autoFocus
+              value={value}
+              onChange={(e) => {
+                // A typed sign (hardware keyboards) flips the toggle instead of staying in the field.
+                const next = e.target.value;
+                if (/^\s*-/.test(next)) setLoss(true);
+                else if (/^\s*\+/.test(next)) setLoss(false);
+                setValue(next.replace(/[+-]/g, ""));
+              }}
+              placeholder="e.g. 320 or 175.50"
+              className={`${inputClass} min-w-0`}
+            />
+          </div>
+          <span className="text-caption text-fg-muted">Pick Profit or Loss, then enter the amount. Leave empty for no activity.</span>
+        </div>
         {error && (
           <p role="alert" className="text-body text-loss">
             {error}
