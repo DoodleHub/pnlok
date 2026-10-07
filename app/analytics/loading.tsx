@@ -53,8 +53,8 @@ export default function Loading() {
           <Bone className="h-[200px] rounded-sm sm:h-[240px]" />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          {[7, 7].map((rows, i) => (
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          {[7, 4].map((rows, i) => (
             <div key={i} className="rounded-lg border border-line-strong bg-surface">
               <Bone className="mx-4 mt-4 mb-3 h-6 w-36 rounded-sm sm:mx-6 sm:mt-5" />
               {Array.from({ length: rows }, (_, r) => (

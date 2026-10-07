@@ -232,7 +232,7 @@ export function AnalyticsView({ accounts, initialAccountId, userEmail, userIniti
           )}
         </section>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid items-start gap-4 lg:grid-cols-2">
           <section aria-labelledby="trades-heading" className="rounded-lg border border-line-strong bg-surface">
             <h2 id="trades-heading" className="px-4 pt-4 pb-2 text-figure-md font-bold tracking-[-0.01em] sm:px-6 sm:pt-5">
               Wins &amp; losses
@@ -244,54 +244,16 @@ export function AnalyticsView({ accounts, initialAccountId, userEmail, userIniti
             </dl>
           </section>
 
-          <div className="flex flex-col gap-4">
-            <section aria-labelledby="concentration-heading" className="rounded-lg border border-line-strong bg-surface">
-              <div className="px-4 pt-4 pb-2 sm:px-6 sm:pt-5">
-                <h2 id="concentration-heading" className="text-figure-md font-bold tracking-[-0.01em]">
-                  Concentration
-                </h2>
-                <p className="mt-0.5 text-caption text-fg-muted">
-                  {a.net > 0
-                    ? "Share of net P&L from your best days. Over 100% means the rest of the days lost money overall."
-                    : "Share of net P&L from your best days. Shown when net P&L is positive."}
-                </p>
-              </div>
-              <dl>
-                {a.topShares.map((t) => (
-                  <div key={t.n} className="grid gap-2 border-t border-line px-4 py-3 sm:px-6">
-                    <div className="flex items-baseline justify-between gap-4">
-                      <dt className="grid gap-0.5">
-                        <span className="text-body text-fg-secondary">{t.n === 1 ? "Top day" : `Top ${t.n} days`}</span>
-                        <span className="text-caption text-fg-muted tabular-nums">
-                          {t.sum > 0 ? `${formatPnl(t.sum, "usd", 1)} of ${formatPnl(a.net, "usd", 1)}` : "No winning days"}
-                        </span>
-                      </dt>
-                      <dd className="text-figure-md font-bold tabular-nums">
-                        {t.share === null ? "—" : percent.format(t.share)}
-                      </dd>
-                    </div>
-                    <div aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-raised">
-                      <div
-                        className="h-full rounded-full bg-accent"
-                        style={{ width: `${Math.min(t.share ?? 0, 1) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </dl>
-            </section>
-
-            <section aria-labelledby="streaks-heading" className="rounded-lg border border-line-strong bg-surface">
-              <h2 id="streaks-heading" className="px-4 pt-4 pb-2 text-figure-md font-bold tracking-[-0.01em] sm:px-6 sm:pt-5">
-                Streaks &amp; risk
-              </h2>
-              <dl>
-                {streakStats.map((s) => (
-                  <StatRow key={s.label} {...s} />
-                ))}
-              </dl>
-            </section>
-          </div>
+          <section aria-labelledby="streaks-heading" className="rounded-lg border border-line-strong bg-surface">
+            <h2 id="streaks-heading" className="px-4 pt-4 pb-2 text-figure-md font-bold tracking-[-0.01em] sm:px-6 sm:pt-5">
+              Streaks &amp; risk
+            </h2>
+            <dl>
+              {streakStats.map((s) => (
+                <StatRow key={s.label} {...s} />
+              ))}
+            </dl>
+          </section>
         </div>
       </div>
     </div>

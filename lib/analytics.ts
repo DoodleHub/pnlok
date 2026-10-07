@@ -2,7 +2,7 @@ import { toKey, type Account } from "./pnl";
 
 /**
  * Performance statistics over an account's logged days. Each logged day is one "trade": the app
- * stores net daily P&L, not individual fills, so win rate, R multiples and top-trade shares are per day.
+ * stores net daily P&L, not individual fills, so win rate and R multiples are per day.
  */
 
 export type Range = "30d" | "90d" | "ytd" | "all";
@@ -28,14 +28,6 @@ export type Drawdown = {
   pct: number | null;
   peakKey: string | null;
   troughKey: string;
-};
-
-export type TopShare = {
-  n: number;
-  /** Sum of the n best days (fewer when there aren't n winning days). */
-  sum: number;
-  /** sum / net P&L, or null when net P&L isn't positive. */
-  share: number | null;
 };
 
 export type Analytics = {
@@ -66,7 +58,6 @@ export type Analytics = {
   maxDrawdown: Drawdown | null;
   /** Current distance below the peak at the end of the range. */
   currentDrawdown: number;
-  topShares: TopShare[];
   longestWinStreak: number;
   longestLossStreak: number;
   equity: EquityPoint[];
@@ -134,12 +125,6 @@ export function analyze(account: Pick<Account, "daily" | "startingBalance">, sta
     if (sign < 0) longestLossStreak = Math.max(longestLossStreak, run);
   }
 
-  const best = [...winDays].sort((a, b) => b.pnl - a.pnl);
-  const topShares = [1, 2, 3].map((n) => {
-    const top = sum(best.slice(0, n));
-    return { n, sum: top, share: net > 0 ? top / net : null };
-  });
-
   return {
     days,
     opening,
@@ -156,11 +141,10 @@ export function analyze(account: Pick<Account, "daily" | "startingBalance">, sta
     payoff: avgWin !== null && avgLoss !== null ? avgWin / -avgLoss : null,
     profitFactor: grossLoss < 0 ? grossProfit / -grossLoss : grossProfit > 0 ? Infinity : null,
     avgR: expectancy !== null && avgLoss !== null ? expectancy / -avgLoss : null,
-    largestWin: best[0] ?? null,
+    largestWin: winDays.reduce<DayEntry | null>((w, d) => (w === null || d.pnl > w.pnl ? d : w), null),
     largestLoss: lossDays.reduce<DayEntry | null>((w, d) => (w === null || d.pnl < w.pnl ? d : w), null),
     maxDrawdown,
     currentDrawdown: equity[equity.length - 1].drawdown,
-    topShares,
     longestWinStreak,
     longestLossStreak,
     equity,
