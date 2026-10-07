@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { EquityPoint } from "@/lib/analytics";
 import { formatMoney, formatPnl, tone } from "@/lib/pnl";
 
@@ -9,12 +9,22 @@ type Props = { points: EquityPoint[]; formatDate: (key: string) => string };
 const W = 800;
 const H = 240;
 const PAD_Y = 12;
+/** Finger travel (px) before a touch is classed as a horizontal scrub or a vertical page scroll. */
+const TOUCH_SLOP = 6;
 const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 const toneClass = { profit: "text-profit", loss: "text-loss", flat: "text-fg-muted" };
+
+/** Index of the point nearest clientX across the plot's width. */
+function indexAt(el: HTMLElement, clientX: number, count: number) {
+  const rect = el.getBoundingClientRect();
+  const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+  return Math.round(ratio * (count - 1));
+}
 
 /** Account balance after each logged day, evenly spaced. Hover or arrow keys show a day's balance and drawdown. */
 export function EquityChart({ points, formatDate }: Props) {
   const [active, setActive] = useState<number | null>(null);
+  const plotRef = useRef<HTMLDivElement>(null);
 
   const balances = points.map((p) => p.balance);
   const lo = Math.min(...balances);
@@ -30,11 +40,63 @@ export function EquityChart({ points, formatDate }: Props) {
   const area = `${line}L${x(points.length - 1)},${H}L${x(0)},${H}Z`;
   const opening = points[0].balance;
 
+  const count = points.length;
+
+  // Mouse and pen hover. Touch is handled below, since a pointer handler can't stop the page from scrolling.
   const onPointer = (e: PointerEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-    setActive(Math.round(ratio * (points.length - 1)));
+    if (e.pointerType !== "touch") setActive(indexAt(e.currentTarget, e.clientX, count));
   };
+
+  // Touch: the first few pixels of travel decide the gesture. Mostly sideways locks into a scrub that
+  // ignores vertical drift until the finger lifts; mostly vertical lets the page scroll.
+  // React's touch listeners are passive, so these are attached by hand to be able to preventDefault.
+  useEffect(() => {
+    const el = plotRef.current;
+    if (!el) return;
+    let start: { x: number; y: number } | null = null;
+    let scrubbing = false;
+
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      start = { x: t.clientX, y: t.clientY };
+      scrubbing = false;
+      setActive(indexAt(el, t.clientX, count));
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!start) return;
+      const t = e.touches[0];
+      if (!scrubbing) {
+        const dx = Math.abs(t.clientX - start.x);
+        const dy = Math.abs(t.clientY - start.y);
+        if (dx < TOUCH_SLOP && dy < TOUCH_SLOP) return;
+        if (dy > dx) {
+          start = null;
+          setActive(null);
+          return;
+        }
+        scrubbing = true;
+      }
+      e.preventDefault();
+      setActive(indexAt(el, t.clientX, count));
+    };
+    const onEnd = () => {
+      start = null;
+      scrubbing = false;
+      setActive(null);
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, [count]);
 
   const onKey = (e: KeyboardEvent) => {
     const last = points.length - 1;
@@ -62,15 +124,16 @@ export function EquityChart({ points, formatDate }: Props) {
         ))}
       </div>
       <div
+        ref={plotRef}
         tabIndex={0}
         role="img"
         aria-label={`Balance from ${formatMoney(opening)} to ${formatMoney(points[points.length - 1].balance)} over ${points.length - 1} logged days. Use the arrow keys to read each day.`}
         onPointerMove={onPointer}
         onPointerDown={onPointer}
-        onPointerLeave={() => setActive(null)}
+        onPointerLeave={(e) => e.pointerType !== "touch" && setActive(null)}
         onKeyDown={onKey}
         onBlur={() => setActive(null)}
-        className="relative h-[200px] touch-pan-y rounded-sm sm:h-[240px]"
+        className="relative h-[200px] touch-manipulation rounded-sm sm:h-[240px]"
       >
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
           {ticks.map((t) => (
