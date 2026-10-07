@@ -37,6 +37,10 @@ export const Eye = (p: IconProps) => (
 export const EyeOff = (p: IconProps) => (
   <Stroke {...p} d="M10.73 5.08A10.43 10.43 0 0 1 12 5a10.75 10.75 0 0 1 9.94 6.65 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-1.44 2.49M14.08 14.16a3 3 0 0 1-4.24-4.24M17.48 17.5a10.75 10.75 0 0 1-15.42-5.15 1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14M2 2l20 20" />
 );
+export const ChartLine = (p: IconProps) => <Stroke {...p} d="M3 3v16a2 2 0 0 0 2 2h16M7 16l4-4 4 4 6-6" />;
+export const CalendarDays = (p: IconProps) => (
+  <Stroke {...p} d="M8 2v4M16 2v4M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2M3 10h18" />
+);
 export const LogOut = (p: IconProps) => <Stroke {...p} d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />;
 
 export function LogoMark({ className }: IconProps) {

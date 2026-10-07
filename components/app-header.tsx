@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Account } from "@/lib/pnl";
 import { AccountSelect } from "./account-select";
-import { LogoMark } from "./icons";
+import { ChartLine, LogoMark } from "./icons";
 import { ProfileMenu } from "./profile-menu";
 
 type Props = {
@@ -31,7 +31,18 @@ export function AppHeader({
       </Link>
       <div className="flex items-center gap-4">
         <AccountSelect accounts={accounts} value={accountId} onChange={onAccountChange} onCreate={onCreateAccount} />
-        <ProfileMenu userEmail={userEmail} userInitial={userInitial} onManageAccounts={onManageAccounts} />
+        <ProfileMenu
+          userEmail={userEmail}
+          userInitial={userInitial}
+          links={[
+            {
+              href: `/analytics?account=${accountId}`,
+              label: "Analytics",
+              icon: <ChartLine className="size-4" />,
+            },
+          ]}
+          onManageAccounts={onManageAccounts}
+        />
       </div>
     </header>
   );

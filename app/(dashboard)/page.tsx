@@ -6,7 +6,7 @@ import { getAccounts } from "@/lib/accounts";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 
-export default async function Home() {
+export default async function Home({ searchParams }: PageProps<"/">) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims) redirect("/login");
@@ -37,5 +37,14 @@ export default async function Home() {
     );
   }
 
-  return <PnlDashboard accounts={accounts} serverNow={new Date()} userEmail={email} userInitial={userInitial} />;
+  const { account } = await searchParams;
+  return (
+    <PnlDashboard
+      accounts={accounts}
+      serverNow={new Date()}
+      userEmail={email}
+      userInitial={userInitial}
+      initialAccountId={typeof account === "string" ? account : undefined}
+    />
+  );
 }

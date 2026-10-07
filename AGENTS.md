@@ -24,6 +24,8 @@ app/
   manifest.ts                PWA manifest (/manifest.webmanifest); apple-icon.png sits beside it
   (dashboard)/page.tsx       Dashboard (server): loads claims + accounts, renders PnlDashboard or the first-account form
   (dashboard)/loading.tsx    Dashboard skeleton while the page loads (route group keeps it off /login)
+  analytics/page.tsx         Analytics (server): loads accounts, renders AnalyticsView (?account= picks the account)
+  analytics/loading.tsx      Analytics skeleton
   actions.ts                 Server actions: createAccount, updateAccount, deleteAccount, saveDailyPnl (upsert, or delete when pnl is null)
   login/                     Email/password sign-in + sign-up page, form (client), authenticate action
   auth/confirm/route.ts      Sign-up confirmation email landing: exchanges `code` (PKCE) or verifies `token_hash`, then redirects
@@ -31,7 +33,9 @@ app/
 components/
   pnl-dashboard.tsx          Client root of the dashboard: selected account, visible month, unit, open dialogs
   app-header.tsx             Logo, AccountSelect, ProfileMenu
-  profile-menu.tsx           Avatar button → menu: Manage accounts, Sign out
+  profile-menu.tsx           Avatar button → menu: page links (Analytics / Calendar), Manage accounts, Sign out
+  analytics-view.tsx         Client root of /analytics: account, date range (30D/90D/YTD/All), stat panels
+  equity-chart.tsx           SVG balance curve with hover/keyboard crosshair tooltip
   manage-accounts.tsx        Dialog body: list accounts, edit inline (CreateAccountForm), delete with confirm
   account-select.tsx         Custom listbox dropdown of accounts + "New account" entry
   stat-strip.tsx             Monthly P&L, win rate, average win/loss
@@ -44,6 +48,7 @@ components/
   submit-button.tsx          Form submit button with a spinner while pending (useFormStatus)
 lib/
   pnl.ts                     Pure domain logic: types, buildMonth, monthStats, formatPnl, tone
+  analytics.ts               Pure analytics: analyze(account, start) → win rate, profit factor, drawdown, R, concentration, streaks, equity curve
   market.ts                  US market calendar: marketClosure(date) → "Weekend" | holiday name | null
   accounts.ts                getAccounts(): reads accounts + daily_pnl for the current user, maps to `Account`
   supabase/server.ts         createClient() for server components, actions and route handlers
@@ -73,6 +78,7 @@ ss-mocks/calendar-design.png Reference design for the dashboard
 - Percent mode measures against the balance going into the period: a day uses its opening balance (`CalendarDay.base` = starting balance + all earlier P&L), monthly P&L the balance at the 1st, and the header's all-time change the starting balance. Average win/loss are averaged in the displayed unit (each day's own percent in % mode). A non-positive base formats as —. `formatPnl` produces `+$4,373.00`, `-$340.00`, `+1.84%`, `$0.00`.
 - US market closures (weekends, NYSE holidays computed in `lib/market.ts`, plus a hand-kept list of unscheduled closures) set `CalendarDay.closed`. Closed days aren't editable unless they already hold an entry (so it can be cleared), and `saveDailyPnl` rejects new P&L on them.
 - `monthStats.winRate` is days with pnl > 0 over days with an entry (a 0 day counts as traded, not a win); `avgWin`/`avgLoss` average the positive/negative days.
+- Analytics treat each logged day as one trade (only daily net P&L is stored). Average R uses 1R = the average losing day; top-N concentration is the best N days' sum over net P&L (only when net > 0). The dashboard and analytics pass the selected account between pages as `?account=<id>`.
 - P&L is stored as `numeric(14,2)`; amounts are rounded to cents before saving.
 
 ## Supabase

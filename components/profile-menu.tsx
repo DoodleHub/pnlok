@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import Link from "next/link";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { signOut } from "@/app/auth/actions";
 import { LogOut, Wallet } from "./icons";
 import { SubmitButton } from "./submit-button";
@@ -8,13 +9,16 @@ import { SubmitButton } from "./submit-button";
 type Props = {
   userEmail: string;
   userInitial: string;
-  onManageAccounts: () => void;
+  /** Page links shown above the actions, e.g. Analytics. */
+  links?: { href: string; label: string; icon: ReactNode }[];
+  /** Omit to hide "Manage accounts". */
+  onManageAccounts?: () => void;
 };
 
 const itemClass =
   "flex w-full items-center gap-2.5 px-4 py-2 text-left text-body text-fg-secondary hover:bg-raised hover:text-fg focus-visible:bg-raised focus-visible:text-fg";
 
-export function ProfileMenu({ userEmail, userInitial, onManageAccounts }: Props) {
+export function ProfileMenu({ userEmail, userInitial, links = [], onManageAccounts }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -74,18 +78,26 @@ export function ProfileMenu({ userEmail, userInitial, onManageAccounts }: Props)
             {userEmail}
           </p>
           <div role="separator" className="mb-1 border-t border-line" />
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onManageAccounts();
-            }}
-            className={itemClass}
-          >
-            <Wallet className="size-4" />
-            Manage accounts
-          </button>
+          {links.map((link) => (
+            <Link key={link.href} href={link.href} role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
+              {link.icon}
+              {link.label}
+            </Link>
+          ))}
+          {onManageAccounts && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onManageAccounts();
+              }}
+              className={itemClass}
+            >
+              <Wallet className="size-4" />
+              Manage accounts
+            </button>
+          )}
           <form action={signOut}>
             <SubmitButton
               role="menuitem"

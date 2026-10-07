@@ -16,6 +16,8 @@ type Props = {
   serverNow: Date;
   userEmail: string;
   userInitial: string;
+  /** Account to show first (from ?account=), falling back to the first account. */
+  initialAccountId?: string;
 };
 
 const changeTone = { profit: "text-profit", loss: "text-loss", flat: "text-fg-muted" };
@@ -44,8 +46,8 @@ function useTodayKey() {
   return useSyncExternalStore(subscribeToday, () => toKey(new Date()), () => null);
 }
 
-export function PnlDashboard({ accounts, serverNow, userEmail, userInitial }: Props) {
-  const [accountId, setAccountId] = useState(accounts[0].id);
+export function PnlDashboard({ accounts, serverNow, userEmail, userInitial, initialAccountId }: Props) {
+  const [accountId, setAccountId] = useState(initialAccountId ?? accounts[0].id);
   const todayKey = useTodayKey();
   // null follows the current month; set once the user navigates.
   const [pickedMonth, setPickedMonth] = useState<{ year: number; month: number } | null>(null);
