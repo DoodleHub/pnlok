@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { formatPnl, formatPnlCompact, tone, type CalendarDay, type Unit } from "@/lib/pnl";
 import { ChevronLeft, ChevronRight } from "./icons";
 
@@ -36,7 +36,7 @@ export function CalendarPanel({
 }: Props) {
   const swipe = useSwipe({ onLeft: onNext, onRight: onPrev });
   return (
-    <section aria-label="Calendar" {...swipe} className="rounded-lg border border-line-strong bg-surface p-3 sm:p-4">
+    <section aria-label="Calendar" ref={swipe} className="rounded-lg border border-line-strong bg-surface p-3 sm:p-4">
       <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-3 px-1 sm:px-3">
         <h2 className="w-full text-[24px] leading-8 font-bold tracking-[-0.01em] sm:mr-6 sm:w-auto sm:text-display-month">
           {monthLabel.format(new Date(year, month, 1))}
@@ -93,29 +93,69 @@ export function CalendarPanel({
   );
 }
 
-/** Horizontal swipe detection: fires when the finger travels mostly sideways past a threshold. */
+/**
+ * Horizontal swipe detection. The first move locks the gesture's axis; a horizontal gesture cancels
+ * native scrolling for its duration so sideways swipes don't drift the page vertically. Native
+ * listeners are used because React's touch listeners are passive and can't call preventDefault.
+ */
 function useSwipe({ onLeft, onRight }: { onLeft: () => void; onRight: () => void }) {
-  const start = useRef<{ x: number; y: number } | null>(null);
-  return {
-    onTouchStart: (e: React.TouchEvent) => {
+  const ref = useRef<HTMLElement>(null);
+  const handlers = useRef({ onLeft, onRight });
+  useEffect(() => {
+    handlers.current = { onLeft, onRight };
+  });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let start: { x: number; y: number } | null = null;
+    let axis: "x" | "y" | null = null;
+
+    const onStart = (e: TouchEvent) => {
       const t = e.touches[0];
-      start.current = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null;
-    },
-    onTouchEnd: (e: React.TouchEvent) => {
-      const s = start.current;
-      start.current = null;
-      if (!s) return;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - s.x;
-      const dy = t.clientY - s.y;
-      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      if (dx < 0) onLeft();
-      else onRight();
-    },
-    onTouchCancel: () => {
-      start.current = null;
-    },
-  };
+      start = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null;
+      axis = null;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!start || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      if (!axis) {
+        if (dx === 0 && dy === 0) return;
+        axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      }
+      if (axis === "x" && e.cancelable) e.preventDefault();
+    };
+    const onEnd = (e: TouchEvent) => {
+      const s = start;
+      const wasX = axis === "x";
+      start = null;
+      axis = null;
+      if (!s || !wasX) return;
+      const dx = e.changedTouches[0].clientX - s.x;
+      if (Math.abs(dx) < 50) return;
+      if (dx < 0) handlers.current.onLeft();
+      else handlers.current.onRight();
+    };
+    const onCancel = () => {
+      start = null;
+      axis = null;
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onCancel);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onCancel);
+    };
+  }, []);
+
+  return ref;
 }
 
 const cellFill = { profit: "bg-profit-cell", loss: "bg-loss-cell", flat: "bg-cell" };
